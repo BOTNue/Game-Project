@@ -5,6 +5,7 @@
 #define SCREENWIDTH 800
 #define SCREENHEIGHT 600
 #define MAX_BULLETS 500
+#define MAX_ENEMIES 50
 
 // Struct for player
 typedef struct
@@ -21,6 +22,17 @@ typedef struct
     Vector2 velocity;
     bool active; 
 } Bullet;
+
+// Struct for enemies
+typedef struct
+{
+    Vector2 position;
+    Vector2 velocity;
+    bool active;
+    float width;
+    float height;
+} Enemy;
+
 
 // Shoot bullets
 void shoot_bullets(Bullet bullet[], Vector2 position, Vector2 direction)
@@ -67,6 +79,52 @@ void draw_bullets(Bullet bullet[])
     }
 }
 
+// Spawning enemies
+void spawn_enemy(Enemy enemy[], Vector2 position, Vector2 direction)
+{
+    for(int i = 0; i < MAX_ENEMIES; i++)
+    {
+        if(!enemy[i].active)
+        {
+            enemy[i].position = position;
+            enemy[i].velocity = direction;
+            enemy[i].active = true;
+            break;
+        }
+    }
+}
+
+// Update enemies
+void update_enemy(Enemy enemy[])
+{
+    for(int i = 0; i < MAX_ENEMIES; i++)
+    {
+        if(enemy[i].active)
+        {
+            enemy[i].position.x += enemy[i].velocity.x * GetFrameTime();
+            enemy[i].position.y += enemy[i].velocity.y * GetFrameTime();
+
+            if(enemy[i].position.x > SCREENWIDTH || enemy[i].position.x < 0 || 
+            enemy[i].position.y > SCREENHEIGHT || enemy[i].position.y < 0)
+            {
+                enemy[i].active = false;
+            }
+        }
+    }
+}
+
+// Draw enemies
+void draw_enemy(Enemy enemy[])
+{
+   for(int i = 0; i < MAX_ENEMIES; i++)
+   {
+        if(enemy[i].active)
+        {
+            DrawRectangleV(enemy[i].position, (Vector2) {10, 10}, WHITE);
+        }
+   } 
+}
+
 int main()
 {
     // Setting up window
@@ -79,8 +137,10 @@ int main()
     // Defining bullets 
     Bullet bullet [MAX_BULLETS];
 
-    float shoot_cooldown = 0.15f;
+    // Defining enemies
+    Enemy enemy [MAX_ENEMIES];
 
+    float shoot_cooldown = 0.15f;
     float last_shot = 0.0f;
 
     while(!WindowShouldClose())
@@ -109,7 +169,6 @@ int main()
         }
 
         // Player collisions
-
         if(player.position.y < SCREENHEIGHT * 0.6)
         {
             player.position.y = SCREENHEIGHT * 0.6;
@@ -131,7 +190,7 @@ int main()
         }
 
         // Shooting and cooldown logic
-        if (last_shot >= shoot_cooldown)
+        if(last_shot >= shoot_cooldown)
         {
                 if(IsKeyDown(KEY_SPACE))
             {
@@ -145,8 +204,14 @@ int main()
             last_shot += deltatime;
         }
         
-
+        int randomx = GetRandomValue(0, SCREENWIDTH);
+        Vector2 enemyposition = {randomx, 0};
+        Vector2 enemydirection = {0, 100};
+        spawn_enemy(enemy, enemyposition, enemydirection);
+        
         update_bullets(bullet);
+
+        update_enemy(enemy);
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -154,6 +219,8 @@ int main()
         DrawCircleV(player.position, player.radius, WHITE);
 
         draw_bullets(bullet);
+
+        draw_enemy(enemy);
 
         EndDrawing();
     }
