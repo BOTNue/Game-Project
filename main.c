@@ -182,7 +182,7 @@ int main()
             player.position.x -= player.velocity.x * GetFrameTime();
         }
 
-        // Player collisions
+        // Player movement border
         if(player.position.y < SCREENHEIGHT * 0.6)
         {
             player.position.y = SCREENHEIGHT * 0.6;
@@ -201,6 +201,18 @@ int main()
         if(player.position.x + player.radius > SCREENWIDTH)
         {
             player.position.x = SCREENWIDTH - player.radius;
+        }
+
+        // Player enemy collision
+        for(int i = 0; i < MAX_ENEMIES; i++) 
+        {
+            if(enemy[i].active)
+            {
+                if(CheckCollisionCircleRec(player.position, player.radius, (Rectangle){enemy[i].position.x, enemy[i].position.y, 32, 10}))
+                {
+                    enemy[i].active = false;
+                }
+            }
         }
 
         // Shooting and cooldown logic
@@ -238,4 +250,5 @@ int main()
 
         EndDrawing();
     }
+    CloseWindow();
 }
