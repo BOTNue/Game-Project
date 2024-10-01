@@ -9,7 +9,10 @@
 #define MAX_ENEMIES 50
 
 typedef struct {
-    // vad ska finnas i ett vapen
+    float rate_of_fire;
+    float projectile_speed;
+    float projectile_size;
+    float dps;
 } Weapon;
 
 // Struct for player
@@ -49,15 +52,49 @@ Enemy enemy [MAX_ENEMIES] = { 0 };
 
 Weapon weapons[9] = { 0 };
 
-// Shoot bullets
-void shoot_bullets(Vector2 position, Vector2 direction)
+void initialize_weapon(Weapon* weapons)
+{   
+    // Assault rifle typ weapon
+    weapons[0] = (Weapon){
+        .rate_of_fire = 0.1f,
+        .projectile_speed = 350.0f,
+        .projectile_size = 5.0f,
+        .dps = 25.0f,
+    };
+
+    weapons[1] = (Weapon){
+        .rate_of_fire = 1.25f,
+        .projectile_speed = 500.0f,
+        .projectile_size = 12.0f,
+        .dps = 100.0f,
+    };
+}
+
+// Switching weapons
+int current_weapon_index = 0;
+
+void switch_weapons()
 {
+    if(IsKeyPressed(KEY_ONE))
+    {
+        current_weapon_index = 0;
+    }
+    if(IsKeyPressed(KEY_TWO))
+    {
+        current_weapon_index = 1;
+    }
+    
+}
+
+// Shoot bullets
+void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
+{   
     for(int i = 0; i < MAX_BULLETS; i++)
     {
         if(!bullet[i].active)
         {
             bullet[i].position = position;
-            bullet[i].velocity = direction;
+            bullet[i].velocity = (Vector2){direction.x * current_weapon.projectile_speed, direction.y * current_weapon.projectile_speed};
             bullet[i].active = true;
             break;
         }
@@ -65,7 +102,7 @@ void shoot_bullets(Vector2 position, Vector2 direction)
 }
 
 // Update bullets
-void update_bullets()
+void update_bullets(Weapon current_weapon)
 {
     for(int i = 0; i < MAX_BULLETS; i++)
     {
@@ -84,13 +121,12 @@ void update_bullets()
                 if (enemy[j].active) {
                     if (CheckCollisionCircleRec(bullet[i].position, 5, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10})) {
                         bullet[i].active = false;
-                        enemy[j].hp -= 10;
+                        enemy[j].hp -= current_weapon.dps;
                         if(enemy[j].hp <= 0)
                         {
                             enemy[j].active = false;
                         }
                     }
-
                 }
             }
         }
@@ -98,13 +134,13 @@ void update_bullets()
 }
 
 // Draw bullets 
-void draw_bullets()
+void draw_bullets(Weapon current_weapon)
 {
     for(int i = 0; i < MAX_BULLETS; i++)
     {
         if(bullet[i].active)
         {
-            DrawCircleV(bullet[i].position, 5, RED);
+            DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
         }
     }
 }
@@ -176,8 +212,8 @@ int main()
         .max_hp = 100,
         .damage = 10};
 
+    initialize_weapon(weapons);
 
-    float shoot_cooldown = 0.15f;
     float last_shot = 0.0f;
 
     while(!WindowShouldClose())
@@ -238,14 +274,18 @@ int main()
                 }
             }
         }
+       
+        switch_weapons();
+
+        Weapon current_weapon = weapons[current_weapon_index];
 
         // Shooting and cooldown logic
-        if(last_shot >= shoot_cooldown)
+        if(last_shot >= current_weapon.rate_of_fire)
         {
-                if(IsKeyDown(KEY_SPACE))
+                if(IsMouseButtonDown(MOUSE_BUTTON_LEFT))
             {
-                Vector2 bulletdirection = {0, -400};
-                shoot_bullets(player.position, bulletdirection);
+                Vector2 bulletdirection = {0, -1};
+                shoot_bullets(player.position, bulletdirection, current_weapon);
                 last_shot = 0.0f;
             }
         }
@@ -260,7 +300,7 @@ int main()
         Vector2 enemydirection = {0, 100};
         spawn_enemy(enemyposition, enemydirection);
         
-        update_bullets();
+        update_bullets(current_weapon);
         update_enemy();
 
         BeginDrawing();
@@ -268,7 +308,7 @@ int main()
 
         DrawCircleV(player.position, player.radius, WHITE);
 
-        draw_bullets();
+        draw_bullets(current_weapon);
 
         draw_enemy();
 
