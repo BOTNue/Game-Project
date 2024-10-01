@@ -8,12 +8,19 @@
 #define MAX_BULLETS 500
 #define MAX_ENEMIES 50
 
+typedef struct {
+    // vad ska finnas i ett vapen
+} Weapon;
+
 // Struct for player
 typedef struct
 {
     Vector2 position;
     Vector2 velocity;
     float radius;
+    float hp;
+    float max_hp;
+    float damage;
 } Player;
 
 // Struct for bullets
@@ -30,6 +37,7 @@ typedef struct
     Vector2 position;
     Vector2 velocity;
     bool active;
+    float hp;
 } Enemy;
 
 
@@ -39,6 +47,7 @@ Bullet bullet [MAX_BULLETS] = { 0 };
 // Initializing enemies
 Enemy enemy [MAX_ENEMIES] = { 0 };
 
+Weapon weapons[9] = { 0 };
 
 // Shoot bullets
 void shoot_bullets(Vector2 position, Vector2 direction)
@@ -73,10 +82,14 @@ void update_bullets()
 
             for (int j = 0; j < MAX_ENEMIES; j++) {
                 if (enemy[j].active) {
-                if (CheckCollisionCircleRec(bullet[i].position, 5, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10})) {
-                    bullet[i].active = false;
-                    enemy[j].active = false;
-                }
+                    if (CheckCollisionCircleRec(bullet[i].position, 5, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10})) {
+                        bullet[i].active = false;
+                        enemy[j].hp -= 10;
+                        if(enemy[j].hp <= 0)
+                        {
+                            enemy[j].active = false;
+                        }
+                    }
 
                 }
             }
@@ -103,9 +116,13 @@ void spawn_enemy(Vector2 position, Vector2 direction)
     {
         if(!enemy[i].active)
         {
-            enemy[i].position = position;
-            enemy[i].velocity = direction;
-            enemy[i].active = true;
+            enemy[i] = (Enemy){
+                .position = position,
+                .velocity = direction,
+                .active = true,
+                .hp = 50
+            };
+            
             return;
         }
     }
@@ -151,7 +168,13 @@ int main()
     SetTargetFPS(60);
 
     // Initializing player
-    Player player = {{SCREENWIDTH / 2, SCREENHEIGHT * 0.8}, {200.0f, 200.0f}, 10};
+    Player player = {
+        .position = {SCREENWIDTH / 2, SCREENHEIGHT * 0.8},
+        .velocity = {200.0f, 200.0f},
+        .radius = 10,
+        .hp = 100,
+        .max_hp = 100,
+        .damage = 10};
 
 
     float shoot_cooldown = 0.15f;
@@ -211,6 +234,7 @@ int main()
                 if(CheckCollisionCircleRec(player.position, player.radius, (Rectangle){enemy[i].position.x, enemy[i].position.y, 32, 10}))
                 {
                     enemy[i].active = false;
+                    player.hp -= 10;
                 }
             }
         }
@@ -241,12 +265,22 @@ int main()
 
         BeginDrawing();
         ClearBackground(BLACK);
-        
+
         DrawCircleV(player.position, player.radius, WHITE);
 
         draw_bullets();
 
         draw_enemy();
+
+
+        static const int hp_bar_rec_width = 300;
+        Rectangle hp_bar_rec = {
+            .x = 8,
+            .y = 8,
+            .height = 32,
+            .width = (player.hp / player.max_hp) * hp_bar_rec_width
+        };
+        DrawRectangleRec(hp_bar_rec, RED);
 
         EndDrawing();
     }
