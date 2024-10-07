@@ -44,7 +44,6 @@ typedef struct
     Vector2 position;
     Vector2 velocity;
     bool active;
-    Projectile_type projectile_type;
 } Bullet;
 
 // Struct for explosions
@@ -162,12 +161,13 @@ void explode(Vector2 position, float radius)
                 .position = position,
                 .radius = radius,
                 .active = true,
-                .lifetime = 3.5f};
+                .lifetime = 0.75f};
             return;
         }
     }
 }
 
+// Update explosion
 void update_explode(Weapon current_weapon)
 {
     for (int i = 0; i < MAX_EXPLOSION; i++)
@@ -222,7 +222,6 @@ void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
             bullet[i].position = position;
             bullet[i].velocity = (Vector2){direction.x * current_weapon.projectile_speed, direction.y * current_weapon.projectile_speed};
             bullet[i].active = true;
-            bullet[i].projectile_type = current_weapon.projectile_type;
             break;
         }
     }
@@ -241,10 +240,6 @@ void update_bullets(Weapon current_weapon)
             if (bullet[i].position.x > SCREENWIDTH || bullet[i].position.x < 0 ||
                 bullet[i].position.y > SCREENHEIGHT || bullet[i].position.y < 0)
             {
-                if (current_weapon.projectile_type == weapon_rocket)
-                {
-                    explode(bullet[i].position, current_weapon.projectile_size * 2);
-                }
                 bullet[i].active = false;
             }
 
@@ -466,6 +461,7 @@ int main()
 
         update_bullets(current_weapon);
         update_enemy();
+        update_explode(current_weapon);
 
         BeginDrawing();
         ClearBackground(BLACK);
