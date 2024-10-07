@@ -7,6 +7,7 @@
 
 #define MAX_BULLETS 500
 #define MAX_ENEMIES 50
+#define MAX_EXPLOSION 50
 
 // Enum for different projectile types
 typedef enum
@@ -43,7 +44,17 @@ typedef struct
     Vector2 position;
     Vector2 velocity;
     bool active;
+    Projectile_type projectile_type;
 } Bullet;
+
+// Struct for explosions
+typedef struct
+{
+    Vector2 position;
+    float radius;
+    bool active;
+    float lifetime;
+} Explosion;
 
 // Struct for enemies
 typedef struct
@@ -56,6 +67,9 @@ typedef struct
 
 // Initializing bullets
 Bullet bullet[MAX_BULLETS] = {0};
+
+// Initializing explosions
+Explosion explosion[MAX_EXPLOSION] = {0};
 
 // Initializing enemies
 Enemy enemy[MAX_ENEMIES] = {0};
@@ -70,7 +84,7 @@ void initialize_weapon(Weapon *weapons)
         .projectile_speed = 350.0f,
         .projectile_size = 5.0f,
         .dps = 15.0f,
-        .projectile_type = weapon_rocket,
+        .projectile_type = weapon_bullet,
     };
 
     // Slow firing high damage
@@ -79,16 +93,34 @@ void initialize_weapon(Weapon *weapons)
         .projectile_speed = 500.0f,
         .projectile_size = 12.0f,
         .dps = 100.0f,
-        .projectile_type = weapon_laser,
+        .projectile_type = weapon_bullet,
     };
 
-    // medium firing and mid damage
+    // Medium firing and mid damage
     weapons[2] = (Weapon){
         .rate_of_fire = 0.25f,
         .projectile_speed = 375.0f,
         .projectile_size = 7.5f,
         .dps = 22.0f,
         .projectile_type = weapon_bullet,
+    };
+
+    // Laser weapon
+    weapons[3] = (Weapon){
+        .rate_of_fire = 0.0f,
+        .projectile_speed = 700.0f,
+        .projectile_size = 6.0f,
+        .dps = 22.0f,
+        .projectile_type = weapon_laser,
+    };
+
+    // Rocket weapon
+    weapons[4] = (Weapon){
+        .rate_of_fire = 0.75f,
+        .projectile_speed = 450.0f,
+        .projectile_size = 9.0f,
+        .dps = 50.0f,
+        .projectile_type = weapon_rocket,
     };
 }
 
@@ -109,6 +141,75 @@ void switch_weapons()
     {
         current_weapon_index = 2;
     }
+    if (IsKeyPressed(KEY_FOUR))
+    {
+        current_weapon_index = 3;
+    }
+    if (IsKeyPressed(KEY_FIVE))
+    {
+        current_weapon_index = 4;
+    }
+}
+
+// Creating explosion
+void explode(Vector2 position, float radius)
+{
+    for (int i = 0; i < MAX_EXPLOSION; i++)
+    {
+        if (!explosion[i].active)
+        {
+            explosion[i] = (Explosion){
+                .position = position,
+                .radius = radius,
+                .active = true,
+                .lifetime = 3.5f};
+            return;
+        }
+    }
+}
+
+void update_explode(Weapon current_weapon)
+{
+    for (int i = 0; i < MAX_EXPLOSION; i++)
+    {
+        if (explosion[i].active)
+        {
+            explosion[i].lifetime -= GetFrameTime();
+
+            if (explosion[i].lifetime < 0.0f)
+            {
+                explosion[i].active = false;
+                continue;
+            }
+
+            for (int j = 0; j < MAX_ENEMIES; j++)
+            {
+                if (enemy[j].active)
+                {
+                    if (CheckCollisionCircleRec(explosion[i].position, explosion[i].radius, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
+                    {
+                        enemy[j].hp -= current_weapon.dps;
+
+                        if (enemy[j].hp <= 0)
+                        {
+                            enemy[j].active = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void draw_explosion()
+{
+    for (int i = 0; i < MAX_EXPLOSION; i++)
+    {
+        if (explosion[i].active)
+        {
+            DrawCircleV(explosion[i].position, explosion[i].radius, YELLOW);
+        }
+    }
 }
 
 // Shoot bullets
@@ -121,6 +222,7 @@ void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
             bullet[i].position = position;
             bullet[i].velocity = (Vector2){direction.x * current_weapon.projectile_speed, direction.y * current_weapon.projectile_speed};
             bullet[i].active = true;
+            bullet[i].projectile_type = current_weapon.projectile_type;
             break;
         }
     }
@@ -139,6 +241,10 @@ void update_bullets(Weapon current_weapon)
             if (bullet[i].position.x > SCREENWIDTH || bullet[i].position.x < 0 ||
                 bullet[i].position.y > SCREENHEIGHT || bullet[i].position.y < 0)
             {
+                if (current_weapon.projectile_type == weapon_rocket)
+                {
+                    explode(bullet[i].position, current_weapon.projectile_size * 2);
+                }
                 bullet[i].active = false;
             }
 
@@ -148,6 +254,11 @@ void update_bullets(Weapon current_weapon)
                 {
                     if (CheckCollisionCircleRec(bullet[i].position, 5, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
                     {
+                        if (current_weapon.projectile_type == weapon_rocket)
+                        {
+                            explode(bullet[i].position, current_weapon.projectile_size * 2);
+                        }
+
                         bullet[i].active = false;
                         enemy[j].hp -= current_weapon.dps;
                         if (enemy[j].hp <= 0)
@@ -364,6 +475,8 @@ int main()
         draw_bullets(current_weapon);
 
         draw_enemy();
+
+        draw_explosion();
 
         static const int hp_bar_rec_width = 300;
         Rectangle hp_bar_rec = {
