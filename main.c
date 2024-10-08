@@ -9,6 +9,7 @@
 #define MAX_ENEMIES 50
 #define MAX_ELITE 20
 #define MAX_EXPLOSION 50
+#define MAX_BOSSES 1
 
 #define MAX_WAVES 20
 // Enum for different projectile types
@@ -75,6 +76,15 @@ typedef struct
     float hp;
 } Elite_enemy;
 
+// Struct for boss enemies
+typedef struct
+{
+    Vector2 position;
+    Vector2 velocity;
+    bool active;
+    float hp;
+} Boss_enemy;
+
 // Initializing bullets
 Bullet bullet[MAX_BULLETS] = {0};
 
@@ -86,6 +96,9 @@ Enemy enemy[MAX_ENEMIES] = {0};
 
 // Initializing elite enemies
 Elite_enemy elite[MAX_ELITE] = {0};
+
+// Initializing boss enemy
+Boss_enemy boss[MAX_BOSSES] = {0};
 
 Weapon weapons[9] = {0};
 
@@ -440,6 +453,56 @@ void draw_elite()
     }
 }
 
+// Spawning boss enemy
+void spawn_boss(Vector2 position, Vector2 direction)
+{
+    for (int i = 0; i < MAX_BOSSES; i++)
+    {
+        if (!boss[i].active)
+        {
+            boss[i] = (Boss_enemy){
+                .position = position,
+                .velocity = direction,
+                .active = true,
+                .hp = 750.0f};
+
+            return;
+        }
+    }
+}
+
+// Update elite enemies
+void update_boss()
+{
+    for (int i = 0; i < MAX_BOSSES; i++)
+    {
+        if (boss[i].active)
+        {
+            boss[i].position.x += boss[i].velocity.x * GetFrameTime();
+            boss[i].position.y += boss[i].velocity.y * GetFrameTime();
+
+            // If the enemy goes outside the screen they will deactivate
+            if (boss[i].position.x > SCREENWIDTH || boss[i].position.x < 0 ||
+                boss[i].position.y > SCREENHEIGHT || boss[i].position.y < 0)
+            {
+                boss[i].active = false;
+            }
+        }
+    }
+}
+
+// Draw elite enemies
+void draw_boss()
+{
+    for (int i = 0; i < MAX_BOSSES; i++)
+    {
+        if (boss[i].active)
+        {
+            DrawRectangleV(boss[i].position, (Vector2){75, 32}, GREEN);
+        }
+    }
+}
+
 int main()
 {
     // Setting up window
@@ -547,9 +610,14 @@ int main()
         Vector2 elite_direction = {0, 0};
         spawn_elite(elite_position, elite_direction);
 
+        Vector2 boss_position = {350, 40};
+        Vector2 boss_direction = {0, 0};
+        spawn_boss(boss_position, boss_direction);
+
         update_bullets(current_weapon);
         update_enemy();
         update_elite();
+        update_boss();
         update_explode(current_weapon);
 
         BeginDrawing();
@@ -562,6 +630,8 @@ int main()
         draw_enemy();
 
         draw_elite();
+
+        draw_boss();
 
         draw_explosion();
 
