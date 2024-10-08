@@ -7,8 +7,10 @@
 
 #define MAX_BULLETS 500
 #define MAX_ENEMIES 50
+#define MAX_ELITE 20
 #define MAX_EXPLOSION 50
 
+#define MAX_WAVES 20
 // Enum for different projectile types
 typedef enum
 {
@@ -64,6 +66,15 @@ typedef struct
     float hp;
 } Enemy;
 
+// Struct for elite enemies
+typedef struct
+{
+    Vector2 position;
+    Vector2 velocity;
+    bool active;
+    float hp;
+} Elite_enemy;
+
 // Initializing bullets
 Bullet bullet[MAX_BULLETS] = {0};
 
@@ -72,6 +83,9 @@ Explosion explosion[MAX_EXPLOSION] = {0};
 
 // Initializing enemies
 Enemy enemy[MAX_ENEMIES] = {0};
+
+// Initializing elite enemies
+Elite_enemy elite[MAX_ELITE] = {0};
 
 Weapon weapons[9] = {0};
 
@@ -109,7 +123,7 @@ void initialize_weapon(Weapon *weapons)
         .rate_of_fire = 0.0f,
         .projectile_speed = 700.0f,
         .projectile_size = 6.0f,
-        .dps = 22.0f,
+        .dps = 7.5f,
         .projectile_type = weapon_laser,
     };
 
@@ -317,7 +331,7 @@ void spawn_enemy(Vector2 position, Vector2 direction)
                 .position = position,
                 .velocity = direction,
                 .active = true,
-                .hp = 50};
+                .hp = 50.0f};
 
             return;
         }
@@ -352,6 +366,56 @@ void draw_enemy()
         if (enemy[i].active)
         {
             DrawRectangleV(enemy[i].position, (Vector2){32, 10}, WHITE);
+        }
+    }
+}
+
+// Spawning elite enemies
+void spawn_elite(Vector2 position, Vector2 direction)
+{
+    for (int i = 0; i < MAX_ELITE; i++)
+    {
+        if (!elite[i].active)
+        {
+            elite[i] = (Elite_enemy){
+                .position = position,
+                .velocity = direction,
+                .active = true,
+                .hp = 250.0f};
+
+            return;
+        }
+    }
+}
+
+// Update elite enemies
+void update_elite()
+{
+    for (int i = 0; i < MAX_ELITE; i++)
+    {
+        if (elite[i].active)
+        {
+            elite[i].position.x += elite[i].velocity.x * GetFrameTime();
+            elite[i].position.y += elite[i].velocity.y * GetFrameTime();
+
+            // If the enemy goes outside the screen they will deactivate
+            if (elite[i].position.x > SCREENWIDTH || elite[i].position.x < 0 ||
+                elite[i].position.y > SCREENHEIGHT || elite[i].position.y < 0)
+            {
+                elite[i].active = false;
+            }
+        }
+    }
+}
+
+// Draw elite enemies
+void draw_elite()
+{
+    for (int i = 0; i < MAX_ELITE; i++)
+    {
+        if (elite[i].active)
+        {
+            DrawRectangleV(elite[i].position, (Vector2){40, 12}, WHITE);
         }
     }
 }
@@ -443,8 +507,8 @@ int main()
         {
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
             {
-                Vector2 bulletdirection = {0, -1};
-                shoot_bullets(player.position, bulletdirection, current_weapon);
+                Vector2 bullet_direction = {0, -1};
+                shoot_bullets(player.position, bullet_direction, current_weapon);
                 last_shot = 0.0f;
             }
         }
@@ -453,11 +517,15 @@ int main()
             last_shot += deltatime;
         }
 
-        // Spawning enemy logic
-        int randomx = GetRandomValue(0, SCREENWIDTH);
-        Vector2 enemyposition = {randomx, 0};
-        Vector2 enemydirection = {0, 100};
-        spawn_enemy(enemyposition, enemydirection);
+        int random_x = GetRandomValue(0, SCREENWIDTH);
+        // Enemy logic
+        Vector2 enemy_position = {random_x, 0};
+        Vector2 enemy_direction = {0, 100};
+        spawn_enemy(enemy_position, enemy_direction);
+
+        Vector2 elite_position = {random_x, 15};
+        Vector2 elite_direction = {0, 0};
+        spawn_enemy(elite_position, elite_direction);
 
         update_bullets(current_weapon);
         update_enemy();
@@ -472,7 +540,11 @@ int main()
 
         draw_enemy();
 
+        draw_elite();
+
         draw_explosion();
+
+        DrawText(TextFormat("Weapon id: %d", current_weapon_index + 1), 8, 42, 20, WHITE);
 
         static const int hp_bar_rec_width = 300;
         Rectangle hp_bar_rec = {
