@@ -1,2 +1,2 @@
 # Game Project
- Bullet hell game
+ Shoot em up game
