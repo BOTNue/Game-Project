@@ -261,7 +261,7 @@ void update_bullets(Weapon current_weapon)
             {
                 if (enemy[j].active)
                 {
-                    if (CheckCollisionCircleRec(bullet[i].position, 5, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
                     {
                         if (current_weapon.projectile_type == weapon_rocket)
                         {
@@ -273,6 +273,26 @@ void update_bullets(Weapon current_weapon)
                         if (enemy[j].hp <= 0)
                         {
                             enemy[j].active = false;
+                        }
+                    }
+                }
+            }
+            for (int k = 0; k < MAX_ELITE; k++)
+            {
+                if (elite[k].active)
+                {
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){elite[k].position.x, elite[k].position.y, 40, 12}))
+                    {
+                        if (current_weapon.projectile_type == weapon_rocket)
+                        {
+                            explode(bullet[i].position, current_weapon.projectile_size * 2);
+                        }
+
+                        bullet[i].active = false;
+                        elite[k].hp -= current_weapon.dps;
+                        if (elite[k].hp <= 0)
+                        {
+                            elite[k].active = false;
                         }
                     }
                 }
@@ -415,7 +435,7 @@ void draw_elite()
     {
         if (elite[i].active)
         {
-            DrawRectangleV(elite[i].position, (Vector2){40, 12}, WHITE);
+            DrawRectangleV(elite[i].position, (Vector2){40, 12}, RED);
         }
     }
 }
@@ -525,10 +545,11 @@ int main()
 
         Vector2 elite_position = {random_x, 15};
         Vector2 elite_direction = {0, 0};
-        spawn_enemy(elite_position, elite_direction);
+        spawn_elite(elite_position, elite_direction);
 
         update_bullets(current_weapon);
         update_enemy();
+        update_elite();
         update_explode(current_weapon);
 
         BeginDrawing();
