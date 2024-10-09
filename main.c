@@ -10,6 +10,7 @@
 #define MAX_ELITE 20
 #define MAX_EXPLOSION 50
 #define MAX_BOSSES 1
+#define MAX_POWERUPS 100
 
 #define MAX_WAVES 20
 // Enum for different projectile types
@@ -58,6 +59,15 @@ typedef struct
     float lifetime;
 } Explosion;
 
+typedef struct
+{
+    Vector2 position;
+    Vector2 velocity;
+    bool active;
+    float radius;
+    float lifetime;
+} Powerup;
+
 // Struct for enemies
 typedef struct
 {
@@ -90,6 +100,9 @@ Bullet bullet[MAX_BULLETS] = {0};
 
 // Initializing explosions
 Explosion explosion[MAX_EXPLOSION] = {0};
+
+// Initializing powerups
+Powerup powerup[MAX_POWERUPS] = {0};
 
 // Initializing enemies
 Enemy enemy[MAX_ENEMIES] = {0};
@@ -353,6 +366,92 @@ void draw_bullets(Weapon current_weapon)
     }
 }
 
+void create_powerup(Vector2 position, Vector2 direction)
+{
+    for (int i = 0; i < MAX_POWERUPS; i++)
+    {
+        if (!powerup[i].active)
+        {
+            powerup[i] = (Powerup){
+                .position = position,
+                .velocity = direction,
+                .active = true,
+                .radius = 5,
+                .lifetime = 5.0f,
+            };
+        }
+    }
+}
+
+void update_powerup(Weapon *current_weapon, Player player)
+{
+    for (int i = 0; i < MAX_POWERUPS; i++)
+    {
+        if (powerup[i].active)
+        {
+            powerup[i].position.x += powerup[i].velocity.x * GetFrameTime();
+            powerup[i].position.y += powerup[i].velocity.y * GetFrameTime();
+
+            if (powerup[i].position.x > SCREENWIDTH || powerup[i].position.x < 0 ||
+                powerup[i].position.y > SCREENHEIGHT || powerup[i].position.y < 0)
+            {
+                powerup[i].active = false;
+            }
+
+            switch (current_weapon->projectile_type)
+            {
+            case weapon_bullet:
+            {
+                if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
+                {
+                    current_weapon->rate_of_fire /= 2.0f;
+                    powerup[i].active = false;
+                }
+            }
+            break;
+            case weapon_laser:
+            {
+                if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
+                {
+                    current_weapon->dps *= 2.0f;
+                    powerup[i].active = false;
+                }
+            }
+            break;
+            case weapon_rocket:
+            {
+                if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
+                {
+                    current_weapon->projectile_size *= 2.0f;
+                    powerup[i].active = false;
+                }
+            }
+            break;
+            default:
+            {
+                if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
+                {
+                    current_weapon->rate_of_fire /= 2.0f;
+                    powerup[i].active = false;
+                }
+            }
+            break;
+            }
+        }
+    }
+}
+
+void draw_powerup()
+{
+    for (int i = 0; i < MAX_POWERUPS; i++)
+    {
+        if (powerup[i].active)
+        {
+            DrawCircleV(powerup[i].position, powerup[i].radius, YELLOW);
+        }
+    }
+}
+
 // Spawning enemies
 void spawn_enemy(Vector2 position, Vector2 direction)
 {
@@ -548,9 +647,9 @@ int main()
         }
 
         // Player movement border
-        if (player.position.y < SCREENHEIGHT * 0.6)
+        if (player.position.y - player.radius < 0)
         {
-            player.position.y = SCREENHEIGHT * 0.6;
+            player.position.y = 0 + player.radius;
         }
 
         if (player.position.y + player.radius > SCREENHEIGHT)
@@ -558,7 +657,7 @@ int main()
             player.position.y = SCREENHEIGHT - player.radius;
         }
 
-        if (player.position.x < 0 + player.radius)
+        if (player.position.x - player.radius < 0)
         {
             player.position.x = 0 + player.radius;
         }
@@ -583,15 +682,15 @@ int main()
 
         switch_weapons();
 
-        Weapon current_weapon = weapons[current_weapon_index];
+        Weapon *current_weapon = &weapons[current_weapon_index];
 
         // Shooting and cooldown logic
-        if (last_shot >= current_weapon.rate_of_fire)
+        if (last_shot >= current_weapon->rate_of_fire)
         {
             if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
             {
                 Vector2 bullet_direction = {0, -1};
-                shoot_bullets(player.position, bullet_direction, current_weapon);
+                shoot_bullets(player.position, bullet_direction, *current_weapon);
                 last_shot = 0.0f;
             }
         }
@@ -610,28 +709,35 @@ int main()
         Vector2 elite_direction = {0, 0};
         spawn_elite(elite_position, elite_direction);
 
-        Vector2 boss_position = {350, 40};
-        Vector2 boss_direction = {0, 0};
-        spawn_boss(boss_position, boss_direction);
+        // Vector2 boss_position = {350, 40};
+        // Vector2 boss_direction = {0, 0};
+        // spawn_boss(boss_position, boss_direction);
 
-        update_bullets(current_weapon);
+        Vector2 powerup_position = {random_x, 300};
+        Vector2 powerup_direction = {0, 50};
+        create_powerup(powerup_position, powerup_direction);
+
+        update_bullets(*current_weapon);
         update_enemy();
         update_elite();
-        update_boss();
-        update_explode(current_weapon);
+        // update_boss();
+        update_explode(*current_weapon);
+        update_powerup(current_weapon, player);
 
         BeginDrawing();
         ClearBackground(BLACK);
 
         DrawCircleV(player.position, player.radius, WHITE);
 
-        draw_bullets(current_weapon);
+        draw_bullets(*current_weapon);
+
+        draw_powerup();
 
         draw_enemy();
 
         draw_elite();
 
-        draw_boss();
+        // draw_boss();
 
         draw_explosion();
 
