@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define SCREENWIDTH 800
 #define SCREENHEIGHT 600
@@ -10,7 +11,7 @@
 #define MAX_ELITE 20
 #define MAX_EXPLOSION 50
 #define MAX_BOSSES 1
-#define MAX_POWERUPS 100
+#define MAX_POWERUPS 10
 
 #define MAX_WAVES 20
 // Enum for different projectile types
@@ -252,120 +253,6 @@ void draw_explosion()
     }
 }
 
-// Shoot bullets
-void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
-{
-    for (int i = 0; i < MAX_BULLETS; i++)
-    {
-        if (!bullet[i].active)
-        {
-            bullet[i].position = position;
-            bullet[i].velocity = (Vector2){direction.x * current_weapon.projectile_speed, direction.y * current_weapon.projectile_speed};
-            bullet[i].active = true;
-            break;
-        }
-    }
-}
-
-// Update bullets
-void update_bullets(Weapon current_weapon)
-{
-    for (int i = 0; i < MAX_BULLETS; i++)
-    {
-        if (bullet[i].active)
-        {
-            bullet[i].position.x += bullet[i].velocity.x * GetFrameTime();
-            bullet[i].position.y += bullet[i].velocity.y * GetFrameTime();
-
-            if (bullet[i].position.x > SCREENWIDTH || bullet[i].position.x < 0 ||
-                bullet[i].position.y > SCREENHEIGHT || bullet[i].position.y < 0)
-            {
-                bullet[i].active = false;
-            }
-
-            for (int j = 0; j < MAX_ENEMIES; j++)
-            {
-                if (enemy[j].active)
-                {
-                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
-                    {
-                        if (current_weapon.projectile_type == weapon_rocket)
-                        {
-                            explode(bullet[i].position, current_weapon.projectile_size * 2);
-                        }
-
-                        bullet[i].active = false;
-                        enemy[j].hp -= current_weapon.dps;
-                        if (enemy[j].hp <= 0)
-                        {
-                            enemy[j].active = false;
-                        }
-                    }
-                }
-            }
-            for (int k = 0; k < MAX_ELITE; k++)
-            {
-                if (elite[k].active)
-                {
-                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){elite[k].position.x, elite[k].position.y, 40, 12}))
-                    {
-                        if (current_weapon.projectile_type == weapon_rocket)
-                        {
-                            explode(bullet[i].position, current_weapon.projectile_size * 2);
-                        }
-
-                        bullet[i].active = false;
-                        elite[k].hp -= current_weapon.dps;
-                        if (elite[k].hp <= 0)
-                        {
-                            elite[k].active = false;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Draw bullets
-void draw_bullets(Weapon current_weapon)
-{
-
-    for (int i = 0; i < MAX_BULLETS; i++)
-    {
-        if (bullet[i].active)
-        {
-            switch (current_weapon.projectile_type)
-            {
-            case weapon_bullet:
-            {
-                DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
-            }
-            break;
-
-            case weapon_laser:
-            {
-                DrawRectangleV(bullet[i].position, (Vector2){current_weapon.projectile_size, current_weapon.projectile_size}, BLUE);
-            }
-            break;
-
-            case weapon_rocket:
-            {
-                Vector2 v1 = {bullet[i].position.x, bullet[i].position.y - current_weapon.projectile_size};
-                Vector2 v2 = {bullet[i].position.x - current_weapon.projectile_size, bullet[i].position.y + current_weapon.projectile_size};
-                Vector2 v3 = {bullet[i].position.x + current_weapon.projectile_size, bullet[i].position.y + current_weapon.projectile_size};
-                DrawTriangle(v1, v2, v3, RED);
-            }
-            break;
-
-            default:
-                DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
-                break;
-            }
-        }
-    }
-}
-
 void create_powerup(Vector2 position, Vector2 direction)
 {
     for (int i = 0; i < MAX_POWERUPS; i++)
@@ -379,6 +266,7 @@ void create_powerup(Vector2 position, Vector2 direction)
                 .radius = 5,
                 .lifetime = 5.0f,
             };
+            return;
         }
     }
 }
@@ -448,6 +336,128 @@ void draw_powerup()
         if (powerup[i].active)
         {
             DrawCircleV(powerup[i].position, powerup[i].radius, YELLOW);
+        }
+    }
+}
+
+// Shoot bullets
+void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (!bullet[i].active)
+        {
+            bullet[i].position = position;
+            bullet[i].velocity = (Vector2){direction.x * current_weapon.projectile_speed, direction.y * current_weapon.projectile_speed};
+            bullet[i].active = true;
+            break;
+        }
+    }
+}
+
+// Update bullets
+void update_bullets(Weapon current_weapon)
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullet[i].active)
+        {
+            bullet[i].position.x += bullet[i].velocity.x * GetFrameTime();
+            bullet[i].position.y += bullet[i].velocity.y * GetFrameTime();
+
+            if (bullet[i].position.x > SCREENWIDTH || bullet[i].position.x < 0 ||
+                bullet[i].position.y > SCREENHEIGHT || bullet[i].position.y < 0)
+            {
+                bullet[i].active = false;
+            }
+
+            for (int j = 0; j < MAX_ENEMIES; j++)
+            {
+                if (enemy[j].active)
+                {
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){enemy[j].position.x, enemy[j].position.y, 32, 10}))
+                    {
+                        if (current_weapon.projectile_type == weapon_rocket)
+                        {
+                            explode(bullet[i].position, current_weapon.projectile_size * 2);
+                        }
+
+                        bullet[i].active = false;
+                        enemy[j].hp -= current_weapon.dps;
+                        if (enemy[j].hp <= 0)
+                        {
+                            enemy[j].active = false;
+
+                            int chance = GetRandomValue(0, 100);
+                            if (chance < 20)
+                            {
+                                Vector2 powerup_position = enemy[j].position;
+                                Vector2 powerup_direction = {0, 50};
+                                create_powerup(powerup_position, powerup_direction);
+                            }
+                        }
+                    }
+                }
+            }
+            for (int k = 0; k < MAX_ELITE; k++)
+            {
+                if (elite[k].active)
+                {
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){elite[k].position.x, elite[k].position.y, 40, 12}))
+                    {
+                        if (current_weapon.projectile_type == weapon_rocket)
+                        {
+                            explode(bullet[i].position, current_weapon.projectile_size * 2);
+                        }
+
+                        bullet[i].active = false;
+                        elite[k].hp -= current_weapon.dps;
+                        if (elite[k].hp <= 0)
+                        {
+                            elite[k].active = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Draw bullets
+void draw_bullets(Weapon current_weapon)
+{
+
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullet[i].active)
+        {
+            switch (current_weapon.projectile_type)
+            {
+            case weapon_bullet:
+            {
+                DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
+            }
+            break;
+
+            case weapon_laser:
+            {
+                DrawRectangleV(bullet[i].position, (Vector2){current_weapon.projectile_size, current_weapon.projectile_size}, BLUE);
+            }
+            break;
+
+            case weapon_rocket:
+            {
+                Vector2 v1 = {bullet[i].position.x, bullet[i].position.y - current_weapon.projectile_size};
+                Vector2 v2 = {bullet[i].position.x - current_weapon.projectile_size, bullet[i].position.y + current_weapon.projectile_size};
+                Vector2 v3 = {bullet[i].position.x + current_weapon.projectile_size, bullet[i].position.y + current_weapon.projectile_size};
+                DrawTriangle(v1, v2, v3, RED);
+            }
+            break;
+
+            default:
+                DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
+                break;
+            }
         }
     }
 }
@@ -712,10 +722,6 @@ int main()
         // Vector2 boss_position = {350, 40};
         // Vector2 boss_direction = {0, 0};
         // spawn_boss(boss_position, boss_direction);
-
-        Vector2 powerup_position = {random_x, 300};
-        Vector2 powerup_direction = {0, 50};
-        create_powerup(powerup_position, powerup_direction);
 
         update_bullets(*current_weapon);
         update_enemy();
