@@ -96,6 +96,15 @@ typedef struct
     float hp;
 } Boss_enemy;
 
+typedef struct
+{
+    int num_enemy;
+    int num_elite;
+    int num_boss;
+    float spawn_rate;
+    bool active;
+} Game_wave;
+
 // Initializing bullets
 Bullet bullet[MAX_BULLETS] = {0};
 
@@ -107,12 +116,15 @@ Powerup powerup[MAX_POWERUPS] = {0};
 
 // Initializing enemies
 Enemy enemy[MAX_ENEMIES] = {0};
+int g_curr_num_enemies = 0;
 
 // Initializing elite enemies
 Elite_enemy elite[MAX_ELITE] = {0};
 
 // Initializing boss enemy
 Boss_enemy boss[MAX_BOSSES] = {0};
+
+Game_wave wave[MAX_WAVES] = {0};
 
 Weapon weapons[9] = {0};
 
@@ -387,6 +399,7 @@ void update_bullets(Weapon current_weapon)
                         if (enemy[j].hp <= 0)
                         {
                             enemy[j].active = false;
+                            g_curr_num_enemies--;
 
                             int chance = GetRandomValue(0, 100);
                             if (chance < 20)
@@ -475,6 +488,8 @@ void spawn_enemy(Vector2 position, Vector2 direction)
                 .active = true,
                 .hp = 50.0f};
 
+            g_curr_num_enemies++;
+
             return;
         }
     }
@@ -495,6 +510,7 @@ void update_enemy()
                 enemy[i].position.y > SCREENHEIGHT || enemy[i].position.y < 0)
             {
                 enemy[i].active = false;
+                g_curr_num_enemies--;
             }
         }
     }
@@ -612,6 +628,64 @@ void draw_boss()
     }
 }
 
+void initialize_waves()
+{
+    for (int i = 0; i < MAX_WAVES; i++)
+    {
+        wave[i] = (Game_wave){
+            .num_enemy = 5 + i * 2,
+            .num_elite = i > 3 ? i / 2 : 0,
+            .num_boss = i == 18 - 1 ? 1 : 0,
+            .spawn_rate = 1.0f - i * 0.5f,
+            .active = false};
+    }
+}
+
+int current_wave_index = 0;
+float time_since_last_spawn = 0.0f;
+
+void wave_progress()
+{
+    Game_wave *current_wave = &wave[current_wave_index];
+    if (current_wave->active)
+    {
+        time_since_last_spawn = 0.0f;
+
+        for (int i = 0; i < current_wave->num_enemy; i++)
+        {
+            Vector2 enemy_position = {GetRandomValue(0, SCREENWIDTH), 5};
+            Vector2 enemy_direction = {0, 100};
+            spawn_enemy(enemy_position, enemy_direction);
+        }
+
+        for (int j = 0; j < current_wave->num_elite; j++)
+        {
+            Vector2 elite_position = {GetRandomValue(0, SCREENWIDTH), 5};
+            Vector2 elite_direction = {0, 50};
+            spawn_elite(elite_position, elite_direction);
+        }
+
+        for (int k = 0; k < current_wave->num_boss; k++)
+        {
+            Vector2 boss_position = {SCREENWIDTH / 2, 5};
+            Vector2 boss_direction = {0, 20};
+            spawn_boss(boss_position, boss_direction);
+        }
+
+        current_wave->active = false;
+    }
+
+    if (g_curr_num_enemies == 0)
+    {
+        current_wave_index++;
+        if (current_wave_index >= MAX_WAVES)
+        {
+            current_wave_index = 0;
+        }
+        wave[current_wave_index].active = true;
+    }
+}
+
 int main()
 {
     // Setting up window
@@ -628,6 +702,8 @@ int main()
         .damage = 10};
 
     initialize_weapon(weapons);
+
+    initialize_waves();
 
     float last_shot = 0.0f;
 
@@ -709,19 +785,21 @@ int main()
             last_shot += deltatime;
         }
 
-        int random_x = GetRandomValue(0, SCREENWIDTH);
-        // Enemy logic
-        Vector2 enemy_position = {random_x, 0};
-        Vector2 enemy_direction = {0, 100};
-        spawn_enemy(enemy_position, enemy_direction);
+        // int random_x = GetRandomValue(0, SCREENWIDTH);
+        // // Enemy logic
+        // Vector2 enemy_position = {random_x, 0};
+        // Vector2 enemy_direction = {0, 100};
+        // spawn_enemy(enemy_position, enemy_direction);
 
-        Vector2 elite_position = {random_x, 15};
-        Vector2 elite_direction = {0, 0};
-        spawn_elite(elite_position, elite_direction);
+        // Vector2 elite_position = {random_x, 15};
+        // Vector2 elite_direction = {0, 0};
+        // spawn_elite(elite_position, elite_direction);
 
         // Vector2 boss_position = {350, 40};
         // Vector2 boss_direction = {0, 0};
         // spawn_boss(boss_position, boss_direction);
+
+        wave_progress();
 
         update_bullets(*current_weapon);
         update_enemy();
@@ -748,6 +826,8 @@ int main()
         draw_explosion();
 
         DrawText(TextFormat("Weapon id: %d", current_weapon_index + 1), 8, 42, 20, WHITE);
+
+        DrawText(TextFormat("Current wave: %d", current_wave_index + 1), 8, 68, 20, WHITE);
 
         static const int hp_bar_rec_width = 300;
         Rectangle hp_bar_rec = {
