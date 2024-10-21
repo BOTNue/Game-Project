@@ -246,6 +246,40 @@ void update_explode(Weapon current_weapon)
                         if (enemy[j].hp <= 0)
                         {
                             enemy[j].active = false;
+
+                            g_curr_num_enemies--;
+                        }
+                    }
+                }
+            }
+
+            for (int j = 0; j < MAX_ELITE; j++)
+            {
+                if (elite[j].active)
+                {
+                    if (CheckCollisionCircleRec(explosion[i].position, explosion[i].radius, (Rectangle){elite[j].position.x, elite[j].position.y, 32, 10}))
+                    {
+                        elite[j].hp -= current_weapon.dps;
+
+                        if (elite[j].hp <= 0)
+                        {
+                            elite[j].active = false;
+                        }
+                    }
+                }
+            }
+
+            for (int j = 0; j < MAX_BOSSES; j++)
+            {
+                if (boss[j].active)
+                {
+                    if (CheckCollisionCircleRec(explosion[i].position, explosion[i].radius, (Rectangle){boss[j].position.x, boss[j].position.y, 32, 10}))
+                    {
+                        boss[j].hp -= current_weapon.dps;
+
+                        if (boss[j].hp <= 0)
+                        {
+                            boss[j].active = false;
                         }
                     }
                 }
@@ -402,7 +436,7 @@ void update_bullets(Weapon current_weapon)
                             g_curr_num_enemies--;
 
                             int chance = GetRandomValue(0, 100);
-                            if (chance < 20)
+                            if (chance < 3)
                             {
                                 Vector2 powerup_position = enemy[j].position;
                                 Vector2 powerup_direction = {0, 50};
@@ -412,11 +446,12 @@ void update_bullets(Weapon current_weapon)
                     }
                 }
             }
-            for (int k = 0; k < MAX_ELITE; k++)
+
+            for (int j = 0; j < MAX_ELITE; j++)
             {
-                if (elite[k].active)
+                if (elite[j].active)
                 {
-                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){elite[k].position.x, elite[k].position.y, 40, 12}))
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){elite[j].position.x, elite[j].position.y, 40, 12}))
                     {
                         if (current_weapon.projectile_type == weapon_rocket)
                         {
@@ -424,10 +459,31 @@ void update_bullets(Weapon current_weapon)
                         }
 
                         bullet[i].active = false;
-                        elite[k].hp -= current_weapon.dps;
-                        if (elite[k].hp <= 0)
+                        elite[j].hp -= current_weapon.dps;
+                        if (elite[j].hp <= 0)
                         {
-                            elite[k].active = false;
+                            elite[j].active = false;
+                        }
+                    }
+                }
+            }
+
+            for (int j = 0; j < MAX_BOSSES; j++)
+            {
+                if (boss[j].active)
+                {
+                    if (CheckCollisionCircleRec(bullet[i].position, current_weapon.projectile_size, (Rectangle){boss[j].position.x, boss[j].position.y, 75, 32}))
+                    {
+                        if (current_weapon.projectile_type == weapon_rocket)
+                        {
+                            explode(bullet[i].position, current_weapon.projectile_size * 2);
+                        }
+
+                        bullet[i].active = false;
+                        boss[j].hp -= current_weapon.dps;
+                        if (boss[j].hp <= 0)
+                        {
+                            boss[j].active = false;
                         }
                     }
                 }
@@ -761,6 +817,7 @@ int main()
                 if (CheckCollisionCircleRec(player.position, player.radius, (Rectangle){enemy[i].position.x, enemy[i].position.y, 32, 10}))
                 {
                     enemy[i].active = false;
+                    g_curr_num_enemies--;
                     player.hp -= 10;
                 }
             }
@@ -785,26 +842,12 @@ int main()
             last_shot += deltatime;
         }
 
-        // int random_x = GetRandomValue(0, SCREENWIDTH);
-        // // Enemy logic
-        // Vector2 enemy_position = {random_x, 0};
-        // Vector2 enemy_direction = {0, 100};
-        // spawn_enemy(enemy_position, enemy_direction);
-
-        // Vector2 elite_position = {random_x, 15};
-        // Vector2 elite_direction = {0, 0};
-        // spawn_elite(elite_position, elite_direction);
-
-        // Vector2 boss_position = {350, 40};
-        // Vector2 boss_direction = {0, 0};
-        // spawn_boss(boss_position, boss_direction);
-
         wave_progress();
 
         update_bullets(*current_weapon);
         update_enemy();
         update_elite();
-        // update_boss();
+        update_boss();
         update_explode(*current_weapon);
         update_powerup(current_weapon, player);
 
@@ -821,7 +864,7 @@ int main()
 
         draw_elite();
 
-        // draw_boss();
+        draw_boss();
 
         draw_explosion();
 
