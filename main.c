@@ -73,16 +73,18 @@ typedef struct
 typedef struct
 {
     Vector2 position;
-    Vector2 velocity;
+    Vector2 velocity1;
+    Vector2 velocity2;
     bool active;
     float hp;
+    bool moving_down;
 } Enemy;
 
 // Struct for elite enemies
 typedef struct
 {
     Vector2 position;
-    Vector2 velocity;
+    Vector2 velocity1;
     bool active;
     float hp;
 } Elite_enemy;
@@ -91,7 +93,7 @@ typedef struct
 typedef struct
 {
     Vector2 position;
-    Vector2 velocity;
+    Vector2 velocity1;
     bool active;
     float hp;
 } Boss_enemy;
@@ -532,7 +534,7 @@ void draw_bullets(Weapon current_weapon)
 }
 
 // Spawning enemies
-void spawn_enemy(Vector2 position, Vector2 direction)
+void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_ENEMIES; i++)
     {
@@ -540,9 +542,11 @@ void spawn_enemy(Vector2 position, Vector2 direction)
         {
             enemy[i] = (Enemy){
                 .position = position,
-                .velocity = direction,
+                .velocity1 = direction_down,
+                .velocity2 = direction_up,
                 .active = true,
-                .hp = 50.0f};
+                .hp = 50.0f,
+                .moving_down = true};
 
             g_curr_num_enemies++;
 
@@ -558,12 +562,29 @@ void update_enemy()
     {
         if (enemy[i].active)
         {
-            enemy[i].position.x += enemy[i].velocity.x * GetFrameTime();
-            enemy[i].position.y += enemy[i].velocity.y * GetFrameTime();
+            if (enemy[i].moving_down)
+            {
+                enemy[i].position.x += enemy[i].velocity1.x * GetFrameTime();
+                enemy[i].position.y += enemy[i].velocity1.y * GetFrameTime();
+
+                if (enemy[i].position.y >= SCREENHEIGHT - 10)
+                {
+                    enemy[i].moving_down = false;
+                }
+            }
+            else
+            {
+                enemy[i].position.x += enemy[i].velocity2.x * GetFrameTime();
+                enemy[i].position.y += enemy[i].velocity2.y * GetFrameTime();
+
+                if (enemy[i].position.y <= 0)
+                {
+                    enemy[i].moving_down = true;
+                }
+            }
 
             // If the enemy goes outside the screen they will deactivate
-            if (enemy[i].position.x > SCREENWIDTH || enemy[i].position.x < 0 ||
-                enemy[i].position.y > SCREENHEIGHT || enemy[i].position.y < 0)
+            if (enemy[i].position.x > SCREENWIDTH || enemy[i].position.x < 0)
             {
                 enemy[i].active = false;
                 g_curr_num_enemies--;
@@ -585,7 +606,7 @@ void draw_enemy()
 }
 
 // Spawning elite enemies
-void spawn_elite(Vector2 position, Vector2 direction)
+void spawn_elite(Vector2 position, Vector2 direction_down)
 {
     for (int i = 0; i < MAX_ELITE; i++)
     {
@@ -593,7 +614,7 @@ void spawn_elite(Vector2 position, Vector2 direction)
         {
             elite[i] = (Elite_enemy){
                 .position = position,
-                .velocity = direction,
+                .velocity1 = direction_down,
                 .active = true,
                 .hp = 250.0f};
 
@@ -609,8 +630,8 @@ void update_elite()
     {
         if (elite[i].active)
         {
-            elite[i].position.x += elite[i].velocity.x * GetFrameTime();
-            elite[i].position.y += elite[i].velocity.y * GetFrameTime();
+            elite[i].position.x += elite[i].velocity1.x * GetFrameTime();
+            elite[i].position.y += elite[i].velocity1.y * GetFrameTime();
 
             // If the enemy goes outside the screen they will deactivate
             if (elite[i].position.x > SCREENWIDTH || elite[i].position.x < 0 ||
@@ -635,7 +656,7 @@ void draw_elite()
 }
 
 // Spawning boss enemy
-void spawn_boss(Vector2 position, Vector2 direction)
+void spawn_boss(Vector2 position, Vector2 direction_down)
 {
     for (int i = 0; i < MAX_BOSSES; i++)
     {
@@ -643,7 +664,7 @@ void spawn_boss(Vector2 position, Vector2 direction)
         {
             boss[i] = (Boss_enemy){
                 .position = position,
-                .velocity = direction,
+                .velocity1 = direction_down,
                 .active = true,
                 .hp = 750.0f};
 
@@ -659,8 +680,8 @@ void update_boss()
     {
         if (boss[i].active)
         {
-            boss[i].position.x += boss[i].velocity.x * GetFrameTime();
-            boss[i].position.y += boss[i].velocity.y * GetFrameTime();
+            boss[i].position.x += boss[i].velocity1.x * GetFrameTime();
+            boss[i].position.y += boss[i].velocity1.y * GetFrameTime();
 
             // If the enemy goes outside the screen they will deactivate
             if (boss[i].position.x > SCREENWIDTH || boss[i].position.x < 0 ||
@@ -710,8 +731,9 @@ void wave_progress()
         for (int i = 0; i < current_wave->num_enemy; i++)
         {
             Vector2 enemy_position = {GetRandomValue(0, SCREENWIDTH), 5};
-            Vector2 enemy_direction = {0, 100};
-            spawn_enemy(enemy_position, enemy_direction);
+            Vector2 enemy_direction_down = {0, 100};
+            Vector2 enemy_direction_up = {0, -100};
+            spawn_enemy(enemy_position, enemy_direction_down, enemy_direction_up);
         }
 
         for (int j = 0; j < current_wave->num_elite; j++)
