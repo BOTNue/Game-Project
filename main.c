@@ -85,8 +85,10 @@ typedef struct
 {
     Vector2 position;
     Vector2 velocity1;
+    Vector2 velocity2;
     bool active;
     float hp;
+    bool moving_down;
 } Elite_enemy;
 
 // Struct for boss enemies
@@ -94,8 +96,10 @@ typedef struct
 {
     Vector2 position;
     Vector2 velocity1;
+    Vector2 velocity2;
     bool active;
     float hp;
+    bool moving_down;
 } Boss_enemy;
 
 typedef struct
@@ -606,7 +610,7 @@ void draw_enemy()
 }
 
 // Spawning elite enemies
-void spawn_elite(Vector2 position, Vector2 direction_down)
+void spawn_elite(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_ELITE; i++)
     {
@@ -615,8 +619,10 @@ void spawn_elite(Vector2 position, Vector2 direction_down)
             elite[i] = (Elite_enemy){
                 .position = position,
                 .velocity1 = direction_down,
+                .velocity2 = direction_up,
                 .active = true,
-                .hp = 250.0f};
+                .hp = 250.0f,
+                .moving_down = true};
 
             return;
         }
@@ -630,12 +636,29 @@ void update_elite()
     {
         if (elite[i].active)
         {
-            elite[i].position.x += elite[i].velocity1.x * GetFrameTime();
-            elite[i].position.y += elite[i].velocity1.y * GetFrameTime();
+            if (elite[i].moving_down)
+            {
+                elite[i].position.x += elite[i].velocity1.x * GetFrameTime();
+                elite[i].position.y += elite[i].velocity1.y * GetFrameTime();
+
+                if (elite[i].position.y >= SCREENHEIGHT - 10)
+                {
+                    elite[i].moving_down = false;
+                }
+            }
+            else
+            {
+                elite[i].position.x += elite[i].velocity2.x * GetFrameTime();
+                elite[i].position.y += elite[i].velocity2.y * GetFrameTime();
+
+                if (elite[i].position.y <= 0)
+                {
+                    elite[i].moving_down = true;
+                }
+            }
 
             // If the enemy goes outside the screen they will deactivate
-            if (elite[i].position.x > SCREENWIDTH || elite[i].position.x < 0 ||
-                elite[i].position.y > SCREENHEIGHT || elite[i].position.y < 0)
+            if (elite[i].position.x > SCREENWIDTH || elite[i].position.x < 0)
             {
                 elite[i].active = false;
             }
@@ -656,7 +679,7 @@ void draw_elite()
 }
 
 // Spawning boss enemy
-void spawn_boss(Vector2 position, Vector2 direction_down)
+void spawn_boss(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_BOSSES; i++)
     {
@@ -665,8 +688,10 @@ void spawn_boss(Vector2 position, Vector2 direction_down)
             boss[i] = (Boss_enemy){
                 .position = position,
                 .velocity1 = direction_down,
+                .velocity2 = direction_up,
                 .active = true,
-                .hp = 750.0f};
+                .hp = 750.0f,
+                .moving_down = true};
 
             return;
         }
@@ -680,8 +705,26 @@ void update_boss()
     {
         if (boss[i].active)
         {
-            boss[i].position.x += boss[i].velocity1.x * GetFrameTime();
-            boss[i].position.y += boss[i].velocity1.y * GetFrameTime();
+            if (boss[i].moving_down)
+            {
+                boss[i].position.x += boss[i].velocity1.x * GetFrameTime();
+                boss[i].position.y += boss[i].velocity1.y * GetFrameTime();
+
+                if (boss[i].position.y >= SCREENHEIGHT - 10)
+                {
+                    boss[i].moving_down = false;
+                }
+            }
+            else
+            {
+                boss[i].position.x += boss[i].velocity2.x * GetFrameTime();
+                boss[i].position.y += boss[i].velocity2.y * GetFrameTime();
+
+                if (boss[i].position.y <= 0)
+                {
+                    boss[i].moving_down = true;
+                }
+            }
 
             // If the enemy goes outside the screen they will deactivate
             if (boss[i].position.x > SCREENWIDTH || boss[i].position.x < 0 ||
@@ -710,9 +753,9 @@ void initialize_waves()
     for (int i = 0; i < MAX_WAVES; i++)
     {
         wave[i] = (Game_wave){
-            .num_enemy = 5 + i * 2,
-            .num_elite = i > 3 ? i / 2 : 0,
-            .num_boss = i == 18 - 1 ? 1 : 0,
+            .num_enemy = 10 + i * 4,         // Starts with a base of 10 enemies and adds 4 with each wave.
+            .num_elite = i > 3 ? i / 2 : 0,  // Elite start spawning on wave 5
+            .num_boss = i == 20 - 1 ? 1 : 0, // The boss spawns on wave 20
             .spawn_rate = 1.0f - i * 0.5f,
             .active = false};
     }
@@ -730,7 +773,7 @@ void wave_progress()
 
         for (int i = 0; i < current_wave->num_enemy; i++)
         {
-            Vector2 enemy_position = {GetRandomValue(0, SCREENWIDTH), 5};
+            Vector2 enemy_position = {GetRandomValue(0, SCREENWIDTH - 32), 5};
             Vector2 enemy_direction_down = {0, 100};
             Vector2 enemy_direction_up = {0, -100};
             spawn_enemy(enemy_position, enemy_direction_down, enemy_direction_up);
@@ -738,16 +781,18 @@ void wave_progress()
 
         for (int j = 0; j < current_wave->num_elite; j++)
         {
-            Vector2 elite_position = {GetRandomValue(0, SCREENWIDTH), 5};
-            Vector2 elite_direction = {0, 50};
-            spawn_elite(elite_position, elite_direction);
+            Vector2 elite_position = {GetRandomValue(0, SCREENWIDTH - 40), 5};
+            Vector2 elite_direction_down = {0, 50};
+            Vector2 elite_direction_up = {0, -50};
+            spawn_elite(elite_position, elite_direction_down, elite_direction_up);
         }
 
         for (int k = 0; k < current_wave->num_boss; k++)
         {
             Vector2 boss_position = {SCREENWIDTH / 2, 5};
-            Vector2 boss_direction = {0, 20};
-            spawn_boss(boss_position, boss_direction);
+            Vector2 boss_direction_down = {0, 20};
+            Vector2 boss_dircetion_up = {0, -20};
+            spawn_boss(boss_position, boss_direction_down, boss_dircetion_up);
         }
 
         current_wave->active = false;
@@ -769,6 +814,7 @@ int main()
     // Setting up window
     InitWindow(SCREENWIDTH, SCREENHEIGHT, "GAME PROJECT");
     SetTargetFPS(60);
+    bool gameover = false;
 
     // Initializing player
     Player player = {
@@ -785,7 +831,7 @@ int main()
 
     float last_shot = 0.0f;
 
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && !gameover)
     {
         float deltatime = GetFrameTime();
 
@@ -841,6 +887,11 @@ int main()
                     enemy[i].active = false;
                     g_curr_num_enemies--;
                     player.hp -= 10;
+
+                    if (player.hp <= 0)
+                    {
+                        gameover = true;
+                    }
                 }
             }
         }
