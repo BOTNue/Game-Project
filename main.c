@@ -634,7 +634,6 @@ void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
     }
 }
 
-float time_since_last_shot = 2.0f;
 // Update enemies
 void update_enemy(float deltatime)
 {
@@ -670,6 +669,7 @@ void update_enemy(float deltatime)
                 g_curr_num_enemies--;
             }
 
+            float time_since_last_shot = GetRandomValue(1.0f, 4.0f);
             if (enemy[i].last_shot >= time_since_last_shot)
             {
                 Vector2 bullet_direction = {0, 200};
@@ -751,6 +751,7 @@ void update_elite(float deltatime)
                 elite[i].active = false;
             }
 
+            float time_since_last_shot = GetRandomValue(1.0f, 4.0f);
             if (elite[i].last_shot >= time_since_last_shot)
             {
                 Vector2 bullet_direction = {0, 200};
@@ -833,6 +834,7 @@ void update_boss(float deltatime)
                 boss[i].active = false;
             }
 
+            float time_since_last_shot = GetRandomValue(1.0f, 4.0f);
             if (boss[i].last_shot >= time_since_last_shot)
             {
                 Vector2 bullet_direction = {0, 200};
@@ -865,7 +867,7 @@ void initialize_waves()
     {
         wave[i] = (Game_wave){
             .num_enemy = 10 + i * 4,         // Starts with a base of 10 enemies and adds 4 with each wave.
-            .num_elite = i > 3 ? i / 2 : 0,  // Elite start spawning on wave 5
+            .num_elite = i > 3 ? i : 0,      // Elite start spawning on wave 5
             .num_boss = i == 20 - 1 ? 1 : 0, // One boss spawns on wave 20
             .spawn_rate = 1.0f - i * 0.5f,
             .active = false};
@@ -932,10 +934,14 @@ int main()
     initialize_waves();
 
     float last_shot = 0.0f;
+    float last_damage_hit = -1.0f;
+    float time_since_last_damage_hit = 1.0f;
+    double current_time;
 
     while (!WindowShouldClose() && !gameover)
     {
         float deltatime = GetFrameTime();
+        current_time = GetTime();
 
         // Implementing player movement
         if (IsKeyDown(KEY_W))
@@ -998,6 +1004,46 @@ int main()
             }
         }
 
+        for (int i = 0; i < MAX_ELITE; i++)
+        {
+            if (elite[i].active)
+            {
+                if (CheckCollisionCircleRec(player.position, player.radius, (Rectangle){elite[i].position.x, elite[i].position.y, 40, 12}))
+                {
+                    if (current_time >= last_damage_hit + time_since_last_damage_hit)
+                    {
+                        player.hp -= 10;
+                        last_damage_hit = current_time;
+                    }
+
+                    if (player.hp <= 0)
+                    {
+                        gameover = true;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < MAX_BOSSES; i++)
+        {
+            if (boss[i].active)
+            {
+                if (CheckCollisionCircleRec(player.position, player.radius, (Rectangle){boss[i].position.x, boss[i].position.y, 75, 32}))
+                {
+                    if (current_time >= last_damage_hit + time_since_last_damage_hit)
+                    {
+                        player.hp -= 10;
+                        last_damage_hit = current_time;
+                    }
+
+                    if (player.hp <= 0)
+                    {
+                        gameover = true;
+                    }
+                }
+            }
+        }
+
         switch_weapons();
 
         Weapon *current_weapon = &weapons[current_weapon_index];
@@ -1016,17 +1062,6 @@ int main()
         {
             last_shot += deltatime;
         }
-
-        // if (enemy_last_shot >= time_since_last_shot)
-        // {
-        //     Vector2 enemy_bullet_direction = {0, 200};
-        //     enemy_shoot_bullets(enemy->position, enemy_bullet_direction);
-        //     enemy_last_shot = 0.0f;
-        // }
-        // else
-        // {
-        //     enemy_last_shot += deltatime;
-        // }
 
         wave_progress();
 

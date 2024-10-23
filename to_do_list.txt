@@ -1,7 +1,8 @@
 - [X] Change it so that enemies don't die when going out of bounds. This can be done either by making them turn around when they reach the bottom of the screen or just en up at the top of the screen again.
-- [] Making it so the elite enemies can shoot at the player, making a more challanging game. This will most likly be included for the boss.
+- [X] Making it so the elite enemies can shoot at the player, making a more challanging game. This will most likly be included for the boss.
 - [] Making it so that the enemies move on the x-axis after reached a certain point on the screen, and then go back to moving down the screen.
-- [] Increase the total amount of enemies 
+- [X] Increase the total amount of enemies 
+- [X] Collision with other enemies 
 - [X] Make it so the player actually dies after losing all their hp.
 - [] A menu that the player is presented with when starting the game.
 - [] Add comments to the code that are hard to undersatnd.
