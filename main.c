@@ -7,6 +7,7 @@
 #define SCREENHEIGHT 600
 
 #define MAX_BULLETS 500
+#define MAX_ENEMY_BULLETS 500
 #define MAX_ENEMIES 50
 #define MAX_ELITE 20
 #define MAX_EXPLOSION 50
@@ -78,6 +79,7 @@ typedef struct
     bool active;
     float hp;
     bool moving_down;
+    float last_shot;
 } Enemy;
 
 // Struct for elite enemies
@@ -89,6 +91,7 @@ typedef struct
     bool active;
     float hp;
     bool moving_down;
+    float last_shot;
 } Elite_enemy;
 
 // Struct for boss enemies
@@ -100,7 +103,15 @@ typedef struct
     bool active;
     float hp;
     bool moving_down;
+    float last_shot;
 } Boss_enemy;
+
+typedef struct
+{
+    Vector2 position;
+    Vector2 velocity;
+    bool active;
+} Enemy_bullet;
 
 typedef struct
 {
@@ -130,9 +141,20 @@ Elite_enemy elite[MAX_ELITE] = {0};
 // Initializing boss enemy
 Boss_enemy boss[MAX_BOSSES] = {0};
 
+Enemy_bullet enemy_bullet[MAX_ENEMY_BULLETS] = {9};
+
 Game_wave wave[MAX_WAVES] = {0};
 
 Weapon weapons[9] = {0};
+
+// Initializing player
+Player player = {
+    .position = {SCREENWIDTH / 2, SCREENHEIGHT * 0.8},
+    .velocity = {200.0f, 200.0f},
+    .radius = 10,
+    .hp = 100,
+    .max_hp = 100,
+    .damage = 10};
 
 void initialize_weapon(Weapon *weapons)
 {
@@ -537,6 +559,58 @@ void draw_bullets(Weapon current_weapon)
     }
 }
 
+void enemy_shoot_bullets(Vector2 position, Vector2 direction)
+{
+    for (int i = 0; i < MAX_ENEMY_BULLETS; i++)
+    {
+        if (!enemy_bullet[i].active)
+        {
+            enemy_bullet[i].position = position;
+            enemy_bullet[i].velocity = direction;
+            enemy_bullet[i].active = true;
+            break;
+        }
+    }
+}
+
+void update_enemy_bullet()
+{
+    for (int i = 0; i < MAX_ENEMY_BULLETS; i++)
+    {
+        if (enemy_bullet[i].active)
+        {
+            enemy_bullet[i].position.x += enemy_bullet[i].velocity.x * GetFrameTime();
+            enemy_bullet[i].position.y += enemy_bullet[i].velocity.y * GetFrameTime();
+
+            if (enemy_bullet[i].position.x > SCREENWIDTH || enemy_bullet[i].position.x < 0 ||
+                enemy_bullet[i].position.y > SCREENHEIGHT || enemy_bullet[i].position.y < 0)
+            {
+                enemy_bullet[i].active = false;
+            }
+
+            if (CheckCollisionCircles(enemy_bullet[i].position, 5, player.position, player.radius))
+            {
+                player.hp -= 10;
+                enemy_bullet[i].active = false;
+                if (player.hp <= 0)
+                {
+                }
+            }
+        }
+    }
+}
+
+void draw_enemy_bullet()
+{
+    for (int i = 0; i < MAX_ENEMY_BULLETS; i++)
+    {
+        if (enemy_bullet[i].active)
+        {
+            DrawCircleV(enemy_bullet[i].position, 5, PURPLE);
+        }
+    }
+}
+
 // Spawning enemies
 void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
@@ -550,7 +624,8 @@ void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
                 .velocity2 = direction_up,
                 .active = true,
                 .hp = 50.0f,
-                .moving_down = true};
+                .moving_down = true,
+                .last_shot = 0.0f};
 
             g_curr_num_enemies++;
 
@@ -559,8 +634,9 @@ void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
     }
 }
 
+float time_since_last_shot = 2.0f;
 // Update enemies
-void update_enemy()
+void update_enemy(float deltatime)
 {
     for (int i = 0; i < MAX_ENEMIES; i++)
     {
@@ -593,6 +669,17 @@ void update_enemy()
                 enemy[i].active = false;
                 g_curr_num_enemies--;
             }
+
+            if (enemy[i].last_shot >= time_since_last_shot)
+            {
+                Vector2 bullet_direction = {0, 200};
+                enemy_shoot_bullets(enemy[i].position, bullet_direction);
+                enemy[i].last_shot = 0.0f;
+            }
+            else
+            {
+                enemy[i].last_shot += deltatime;
+            }
         }
     }
 }
@@ -622,7 +709,8 @@ void spawn_elite(Vector2 position, Vector2 direction_down, Vector2 direction_up)
                 .velocity2 = direction_up,
                 .active = true,
                 .hp = 250.0f,
-                .moving_down = true};
+                .moving_down = true,
+                .last_shot = 0.0f};
 
             return;
         }
@@ -630,7 +718,7 @@ void spawn_elite(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 }
 
 // Update elite enemies
-void update_elite()
+void update_elite(float deltatime)
 {
     for (int i = 0; i < MAX_ELITE; i++)
     {
@@ -662,6 +750,17 @@ void update_elite()
             {
                 elite[i].active = false;
             }
+
+            if (elite[i].last_shot >= time_since_last_shot)
+            {
+                Vector2 bullet_direction = {0, 200};
+                enemy_shoot_bullets(elite[i].position, bullet_direction);
+                elite[i].last_shot = 0.0f;
+            }
+            else
+            {
+                elite[i].last_shot += deltatime;
+            }
         }
     }
 }
@@ -691,7 +790,8 @@ void spawn_boss(Vector2 position, Vector2 direction_down, Vector2 direction_up)
                 .velocity2 = direction_up,
                 .active = true,
                 .hp = 750.0f,
-                .moving_down = true};
+                .moving_down = true,
+                .last_shot = 0.0f};
 
             return;
         }
@@ -699,7 +799,7 @@ void spawn_boss(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 }
 
 // Update elite enemies
-void update_boss()
+void update_boss(float deltatime)
 {
     for (int i = 0; i < MAX_BOSSES; i++)
     {
@@ -732,6 +832,17 @@ void update_boss()
             {
                 boss[i].active = false;
             }
+
+            if (boss[i].last_shot >= time_since_last_shot)
+            {
+                Vector2 bullet_direction = {0, 200};
+                enemy_shoot_bullets(boss[i].position, bullet_direction);
+                boss[i].last_shot = 0.0f;
+            }
+            else
+            {
+                boss[i].last_shot += deltatime;
+            }
         }
     }
 }
@@ -755,7 +866,7 @@ void initialize_waves()
         wave[i] = (Game_wave){
             .num_enemy = 10 + i * 4,         // Starts with a base of 10 enemies and adds 4 with each wave.
             .num_elite = i > 3 ? i / 2 : 0,  // Elite start spawning on wave 5
-            .num_boss = i == 20 - 1 ? 1 : 0, // The boss spawns on wave 20
+            .num_boss = i == 20 - 1 ? 1 : 0, // One boss spawns on wave 20
             .spawn_rate = 1.0f - i * 0.5f,
             .active = false};
     }
@@ -815,15 +926,6 @@ int main()
     InitWindow(SCREENWIDTH, SCREENHEIGHT, "GAME PROJECT");
     SetTargetFPS(60);
     bool gameover = false;
-
-    // Initializing player
-    Player player = {
-        .position = {SCREENWIDTH / 2, SCREENHEIGHT * 0.8},
-        .velocity = {200.0f, 200.0f},
-        .radius = 10,
-        .hp = 100,
-        .max_hp = 100,
-        .damage = 10};
 
     initialize_weapon(weapons);
 
@@ -915,12 +1017,24 @@ int main()
             last_shot += deltatime;
         }
 
+        // if (enemy_last_shot >= time_since_last_shot)
+        // {
+        //     Vector2 enemy_bullet_direction = {0, 200};
+        //     enemy_shoot_bullets(enemy->position, enemy_bullet_direction);
+        //     enemy_last_shot = 0.0f;
+        // }
+        // else
+        // {
+        //     enemy_last_shot += deltatime;
+        // }
+
         wave_progress();
 
         update_bullets(*current_weapon);
-        update_enemy();
-        update_elite();
-        update_boss();
+        update_enemy(deltatime);
+        update_elite(deltatime);
+        update_boss(deltatime);
+        update_enemy_bullet();
         update_explode(*current_weapon);
         update_powerup(current_weapon, player);
 
@@ -938,6 +1052,8 @@ int main()
         draw_elite();
 
         draw_boss();
+
+        draw_enemy_bullet();
 
         draw_explosion();
 
