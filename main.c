@@ -15,7 +15,7 @@
 #define MAX_POWERUPS 10
 
 #define MAX_WAVES 20
-// Enum for different projectile types
+
 typedef enum
 {
     weapon_bullet,
@@ -23,7 +23,6 @@ typedef enum
     weapon_rocket
 } Projectile_type;
 
-// Struct for weapons
 typedef struct
 {
     float rate_of_fire;
@@ -33,7 +32,6 @@ typedef struct
     Projectile_type projectile_type;
 } Weapon;
 
-// Struct for player
 typedef struct
 {
     Vector2 position;
@@ -42,9 +40,9 @@ typedef struct
     float hp;
     float max_hp;
     float damage;
+    bool active;
 } Player;
 
-// Struct for bullets
 typedef struct
 {
     Vector2 position;
@@ -52,7 +50,6 @@ typedef struct
     bool active;
 } Bullet;
 
-// Struct for explosions
 typedef struct
 {
     Vector2 position;
@@ -70,7 +67,6 @@ typedef struct
     float lifetime;
 } Powerup;
 
-// Struct for enemies
 typedef struct
 {
     Vector2 position;
@@ -82,7 +78,6 @@ typedef struct
     float last_shot;
 } Enemy;
 
-// Struct for elite enemies
 typedef struct
 {
     Vector2 position;
@@ -94,7 +89,6 @@ typedef struct
     float last_shot;
 } Elite_enemy;
 
-// Struct for boss enemies
 typedef struct
 {
     Vector2 position;
@@ -122,43 +116,47 @@ typedef struct
     bool active;
 } Game_wave;
 
-// Initializing bullets
+// Initializing bullets for the player.
 Bullet bullet[MAX_BULLETS] = {0};
 
-// Initializing explosions
+// Initializing explosions.
 Explosion explosion[MAX_EXPLOSION] = {0};
 
-// Initializing powerups
+// Initializing powerups.
 Powerup powerup[MAX_POWERUPS] = {0};
 
-// Initializing enemies
+// Initializing enemies.
 Enemy enemy[MAX_ENEMIES] = {0};
 int g_curr_num_enemies = 0;
 
-// Initializing elite enemies
+// Initializing elite enemies.
 Elite_enemy elite[MAX_ELITE] = {0};
 
-// Initializing boss enemy
+// Initializing boss enemy.
 Boss_enemy boss[MAX_BOSSES] = {0};
 
+// Initializing bullets for enemies.
 Enemy_bullet enemy_bullet[MAX_ENEMY_BULLETS] = {9};
 
+// Initializing enemy waves.
 Game_wave wave[MAX_WAVES] = {0};
 
+// Initializing weapons.
 Weapon weapons[9] = {0};
 
-// Initializing player
+// Initializing player.
 Player player = {
     .position = {SCREENWIDTH / 2, SCREENHEIGHT * 0.8},
     .velocity = {200.0f, 200.0f},
     .radius = 10,
     .hp = 100,
     .max_hp = 100,
-    .damage = 10};
+    .damage = 10,
+    .active = true};
 
 void initialize_weapon(Weapon *weapons)
 {
-    // Basic fast firing low damaging
+    // Basic fast firing low damaging weapon.
     weapons[0] = (Weapon){
         .rate_of_fire = 0.1f,
         .projectile_speed = 350.0f,
@@ -167,7 +165,7 @@ void initialize_weapon(Weapon *weapons)
         .projectile_type = weapon_bullet,
     };
 
-    // Slow firing high damage
+    // Slow firing high damage weapon.
     weapons[1] = (Weapon){
         .rate_of_fire = 1.25f,
         .projectile_speed = 500.0f,
@@ -176,7 +174,7 @@ void initialize_weapon(Weapon *weapons)
         .projectile_type = weapon_bullet,
     };
 
-    // Medium firing and mid damage
+    // Medium firing and mid damage weapon.
     weapons[2] = (Weapon){
         .rate_of_fire = 0.25f,
         .projectile_speed = 375.0f,
@@ -185,16 +183,16 @@ void initialize_weapon(Weapon *weapons)
         .projectile_type = weapon_bullet,
     };
 
-    // Laser weapon
+    // Laser weapon.
     weapons[3] = (Weapon){
         .rate_of_fire = 0.0f,
         .projectile_speed = 700.0f,
         .projectile_size = 6.0f,
-        .dps = 7.5f,
+        .dps = 3.5f,
         .projectile_type = weapon_laser,
     };
 
-    // Rocket weapon
+    // Rocket weapon.
     weapons[4] = (Weapon){
         .rate_of_fire = 0.75f,
         .projectile_speed = 450.0f,
@@ -204,7 +202,7 @@ void initialize_weapon(Weapon *weapons)
     };
 }
 
-// Switching weapons
+// Switching weapons.
 int current_weapon_index = 0;
 
 void switch_weapons()
@@ -231,7 +229,7 @@ void switch_weapons()
     }
 }
 
-// Creating explosion
+// Creating explosion.
 void explode(Vector2 position, float radius)
 {
     for (int i = 0; i < MAX_EXPLOSION; i++)
@@ -248,7 +246,6 @@ void explode(Vector2 position, float radius)
     }
 }
 
-// Update explosion
 void update_explode(Weapon current_weapon)
 {
     for (int i = 0; i < MAX_EXPLOSION; i++)
@@ -366,7 +363,7 @@ void update_powerup(Weapon *current_weapon, Player player)
             {
                 if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
                 {
-                    current_weapon->rate_of_fire /= 2.0f;
+                    current_weapon->rate_of_fire /= 1.15f;
                     powerup[i].active = false;
                 }
             }
@@ -375,7 +372,7 @@ void update_powerup(Weapon *current_weapon, Player player)
             {
                 if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
                 {
-                    current_weapon->dps *= 2.0f;
+                    current_weapon->dps *= 1.1f;
                     powerup[i].active = false;
                 }
             }
@@ -384,7 +381,7 @@ void update_powerup(Weapon *current_weapon, Player player)
             {
                 if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
                 {
-                    current_weapon->projectile_size *= 2.0f;
+                    current_weapon->projectile_size *= 1.05f;
                     powerup[i].active = false;
                 }
             }
@@ -393,7 +390,7 @@ void update_powerup(Weapon *current_weapon, Player player)
             {
                 if (CheckCollisionCircles(powerup[i].position, powerup[i].radius, player.position, player.radius))
                 {
-                    current_weapon->rate_of_fire /= 2.0f;
+                    current_weapon->rate_of_fire /= 1.15f;
                     powerup[i].active = false;
                 }
             }
@@ -414,7 +411,6 @@ void draw_powerup()
     }
 }
 
-// Shoot bullets
 void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
 {
     for (int i = 0; i < MAX_BULLETS; i++)
@@ -429,7 +425,6 @@ void shoot_bullets(Vector2 position, Vector2 direction, Weapon current_weapon)
     }
 }
 
-// Update bullets
 void update_bullets(Weapon current_weapon)
 {
     for (int i = 0; i < MAX_BULLETS; i++)
@@ -464,7 +459,7 @@ void update_bullets(Weapon current_weapon)
                             g_curr_num_enemies--;
 
                             int chance = GetRandomValue(0, 100);
-                            if (chance < 3)
+                            if (chance < 3) // 3% chance for a power up to spawn.
                             {
                                 Vector2 powerup_position = enemy[j].position;
                                 Vector2 powerup_direction = {0, 50};
@@ -491,6 +486,14 @@ void update_bullets(Weapon current_weapon)
                         if (elite[j].hp <= 0)
                         {
                             elite[j].active = false;
+
+                            int chance = GetRandomValue(0, 100);
+                            if (chance < 8) // 8% chance for a power up to spawn.
+                            {
+                                Vector2 powerup_position = elite[j].position;
+                                Vector2 powerup_direction = {0, 50};
+                                create_powerup(powerup_position, powerup_direction);
+                            }
                         }
                     }
                 }
@@ -520,10 +523,8 @@ void update_bullets(Weapon current_weapon)
     }
 }
 
-// Draw bullets
 void draw_bullets(Weapon current_weapon)
 {
-
     for (int i = 0; i < MAX_BULLETS; i++)
     {
         if (bullet[i].active)
@@ -535,13 +536,11 @@ void draw_bullets(Weapon current_weapon)
                 DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
             }
             break;
-
             case weapon_laser:
             {
                 DrawRectangleV(bullet[i].position, (Vector2){current_weapon.projectile_size, current_weapon.projectile_size}, BLUE);
             }
             break;
-
             case weapon_rocket:
             {
                 Vector2 v1 = {bullet[i].position.x, bullet[i].position.y - current_weapon.projectile_size};
@@ -550,7 +549,6 @@ void draw_bullets(Weapon current_weapon)
                 DrawTriangle(v1, v2, v3, RED);
             }
             break;
-
             default:
                 DrawCircleV(bullet[i].position, current_weapon.projectile_size, RED);
                 break;
@@ -594,6 +592,7 @@ void update_enemy_bullet()
                 enemy_bullet[i].active = false;
                 if (player.hp <= 0)
                 {
+                    player.active = false;
                 }
             }
         }
@@ -606,12 +605,11 @@ void draw_enemy_bullet()
     {
         if (enemy_bullet[i].active)
         {
-            DrawCircleV(enemy_bullet[i].position, 5, PURPLE);
+            DrawCircleV(enemy_bullet[i].position, 5, DARKPURPLE);
         }
     }
 }
 
-// Spawning enemies
 void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_ENEMIES; i++)
@@ -634,7 +632,6 @@ void spawn_enemy(Vector2 position, Vector2 direction_down, Vector2 direction_up)
     }
 }
 
-// Update enemies
 void update_enemy(float deltatime)
 {
     for (int i = 0; i < MAX_ENEMIES; i++)
@@ -662,7 +659,6 @@ void update_enemy(float deltatime)
                 }
             }
 
-            // If the enemy goes outside the screen they will deactivate
             if (enemy[i].position.x > SCREENWIDTH || enemy[i].position.x < 0)
             {
                 enemy[i].active = false;
@@ -684,7 +680,6 @@ void update_enemy(float deltatime)
     }
 }
 
-// Draw enemies
 void draw_enemy()
 {
     for (int i = 0; i < MAX_ENEMIES; i++)
@@ -696,7 +691,6 @@ void draw_enemy()
     }
 }
 
-// Spawning elite enemies
 void spawn_elite(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_ELITE; i++)
@@ -717,7 +711,6 @@ void spawn_elite(Vector2 position, Vector2 direction_down, Vector2 direction_up)
     }
 }
 
-// Update elite enemies
 void update_elite(float deltatime)
 {
     for (int i = 0; i < MAX_ELITE; i++)
@@ -745,7 +738,6 @@ void update_elite(float deltatime)
                 }
             }
 
-            // If the enemy goes outside the screen they will deactivate
             if (elite[i].position.x > SCREENWIDTH || elite[i].position.x < 0)
             {
                 elite[i].active = false;
@@ -766,7 +758,6 @@ void update_elite(float deltatime)
     }
 }
 
-// Draw elite enemies
 void draw_elite()
 {
     for (int i = 0; i < MAX_ELITE; i++)
@@ -778,7 +769,6 @@ void draw_elite()
     }
 }
 
-// Spawning boss enemy
 void spawn_boss(Vector2 position, Vector2 direction_down, Vector2 direction_up)
 {
     for (int i = 0; i < MAX_BOSSES; i++)
@@ -799,7 +789,6 @@ void spawn_boss(Vector2 position, Vector2 direction_down, Vector2 direction_up)
     }
 }
 
-// Update elite enemies
 void update_boss(float deltatime)
 {
     for (int i = 0; i < MAX_BOSSES; i++)
@@ -827,7 +816,6 @@ void update_boss(float deltatime)
                 }
             }
 
-            // If the enemy goes outside the screen they will deactivate
             if (boss[i].position.x > SCREENWIDTH || boss[i].position.x < 0 ||
                 boss[i].position.y > SCREENHEIGHT || boss[i].position.y < 0)
             {
@@ -849,7 +837,6 @@ void update_boss(float deltatime)
     }
 }
 
-// Draw elite enemies
 void draw_boss()
 {
     for (int i = 0; i < MAX_BOSSES; i++)
@@ -867,23 +854,20 @@ void initialize_waves()
     {
         wave[i] = (Game_wave){
             .num_enemy = 10 + i * 4,         // Starts with a base of 10 enemies and adds 4 with each wave.
-            .num_elite = i > 3 ? i : 0,      // Elite start spawning on wave 5
-            .num_boss = i == 20 - 1 ? 1 : 0, // One boss spawns on wave 20
+            .num_elite = i > 3 ? i : 0,      // Elite start spawning on wave 5, spawning 5 and increasing by one.
+            .num_boss = i == 20 - 1 ? 1 : 0, // 1 boss spawns on wave 20.
             .spawn_rate = 1.0f - i * 0.5f,
             .active = false};
     }
 }
 
 int current_wave_index = 0;
-float time_since_last_spawn = 0.0f;
 
 void wave_progress()
 {
     Game_wave *current_wave = &wave[current_wave_index];
     if (current_wave->active)
     {
-        time_since_last_spawn = 0.0f;
-
         for (int i = 0; i < current_wave->num_enemy; i++)
         {
             Vector2 enemy_position = {GetRandomValue(0, SCREENWIDTH - 32), 5};
@@ -892,7 +876,7 @@ void wave_progress()
             spawn_enemy(enemy_position, enemy_direction_down, enemy_direction_up);
         }
 
-        for (int j = 0; j < current_wave->num_elite; j++)
+        for (int i = 0; i < current_wave->num_elite; i++)
         {
             Vector2 elite_position = {GetRandomValue(0, SCREENWIDTH - 40), 5};
             Vector2 elite_direction_down = {0, 50};
@@ -900,7 +884,7 @@ void wave_progress()
             spawn_elite(elite_position, elite_direction_down, elite_direction_up);
         }
 
-        for (int k = 0; k < current_wave->num_boss; k++)
+        for (int i = 0; i < current_wave->num_boss; i++)
         {
             Vector2 boss_position = {SCREENWIDTH / 2, 5};
             Vector2 boss_direction_down = {0, 20};
@@ -927,7 +911,6 @@ int main()
     // Setting up window
     InitWindow(SCREENWIDTH, SCREENHEIGHT, "GAME PROJECT");
     SetTargetFPS(60);
-    bool gameover = false;
 
     initialize_weapon(weapons);
 
@@ -936,12 +919,11 @@ int main()
     float last_shot = 0.0f;
     float last_damage_hit = -1.0f;
     float time_since_last_damage_hit = 1.0f;
-    double current_time;
 
-    while (!WindowShouldClose() && !gameover)
+    while (!WindowShouldClose() && player.active)
     {
         float deltatime = GetFrameTime();
-        current_time = GetTime();
+        double current_time = GetTime();
 
         // Implementing player movement
         if (IsKeyDown(KEY_W))
@@ -998,7 +980,7 @@ int main()
 
                     if (player.hp <= 0)
                     {
-                        gameover = true;
+                        player.active = false;
                     }
                 }
             }
@@ -1018,7 +1000,7 @@ int main()
 
                     if (player.hp <= 0)
                     {
-                        gameover = true;
+                        player.active = false;
                     }
                 }
             }
@@ -1038,7 +1020,7 @@ int main()
 
                     if (player.hp <= 0)
                     {
-                        gameover = true;
+                        player.active = false;
                     }
                 }
             }

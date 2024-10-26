@@ -5,5 +5,5 @@
 - [X] Collision with other enemies 
 - [X] Make it so the player actually dies after losing all their hp.
 - [] A menu that the player is presented with when starting the game.
-- [] Add comments to the code that are hard to undersatnd.
+- [] Add comments to the parts of the code that are hard to undersatnd.
 - [] Power ups fade out after a short amount of time.
