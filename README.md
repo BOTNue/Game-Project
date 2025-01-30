@@ -1,2 +1,2 @@
 # Game Project
- Shoot em up game
+ Scroller shoot em up game
